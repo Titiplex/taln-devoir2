@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Main" type="Application" factoryName="Application">
+    <option name="envFilePaths">
+      <option value="$PROJECT_DIR$/main-project/src/main/resources/config.properties" />
+    </option>
+    <option name="MAIN_CLASS_NAME" value="udem.taln.Main" />
+    <module name="main-project" />
+    <option name="PROGRAM_PARAMETERS" value="--method=&quot;spacy&quot; --model=&quot;en_core_web_lg&quot; --file=&quot;en.nrb.txt&quot;" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

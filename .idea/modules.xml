@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/devoir2.iml" filepath="$PROJECT_DIR$/.idea/devoir2.iml" />
       <module fileurl="file://$PROJECT_DIR$/spacy-wrapper/spacy-wrapper.iml" filepath="$PROJECT_DIR$/spacy-wrapper/spacy-wrapper.iml" />
     </modules>
   </component>
