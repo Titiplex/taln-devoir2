@@ -120,9 +120,16 @@ public class Main {
             long before = System.nanoTime();
             var executed = ollama.execute(processedText);
             long after = System.nanoTime();
-            System.out.println(executed);
+//            System.out.println(executed);
             System.out.println("Success (%) : " + analyser.analyse(executed));
             System.out.println("Time (ms) : " + (after - before) / 1000000.0);
+
+            Analyser.Metrics m = analyser.analyseF1(executed);
+            double precision = m.precision();
+            double recall = m.recall();
+            double f1 = m.f1();
+            System.out.println("Precision: " + precision + ", Recall: " + recall + ", F1: " + f1);
+
             Map<String, String> toFile = new HashMap<>();
             if (executed != null) {
                 for (var result : executed) {
@@ -151,6 +158,7 @@ public class Main {
                 bw.flush();
                 System.out.println("Output written successfully.");
             }
+            System.out.println("Successfully wrote output to file.");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -173,6 +181,12 @@ public class Main {
 //            System.out.println(executed);
             System.out.println("Success (%) : " + (analyser.analyse(executed) * 100));
             System.out.println("Time (ms) : " + (after - before) / 1000000.0);
+
+            Analyser.Metrics m = analyser.analyseF1(executed);
+            double precision = m.precision();
+            double recall = m.recall();
+            double f1 = m.f1();
+            System.out.println("Precision: " + precision + ", Recall: " + recall + ", F1: " + f1);
         }
         return executed;
     }

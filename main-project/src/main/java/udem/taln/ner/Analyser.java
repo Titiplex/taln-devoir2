@@ -1,5 +1,7 @@
 package udem.taln.ner;
 
+import org.jspecify.annotations.NonNull;
+
 import java.util.*;
 
 public class Analyser {
@@ -95,5 +97,69 @@ public class Analyser {
             if (good.equals(pred)) score++;
         }
         return score / (double) labelsMap.size();
+    }
+
+    /**
+     * Micro-averaged precision/recall/F1 over all sentences.
+     * Treats each sentence’s types as a set and aggregates TP/FP/FN globally.
+     */
+    public Metrics analyseF1(List<NER.PSentence> result) {
+        if (result == null || result.isEmpty()) return new Metrics(0, 0, 0);
+
+        Map<Integer, List<NER.TYPE>> predicted = new HashMap<>(result.size());
+        for (var s : result) {
+            predicted.put(s.id(), s.types() == null ? List.of() : s.types());
+        }
+
+        int tp = 0, fp = 0, fn = 0;
+        for (Map.Entry<Integer, List<NER.TYPE>> goodEntry : labelsMap.entrySet()) {
+            int id = goodEntry.getKey();
+            Set<NER.TYPE> good = new HashSet<>(goodEntry.getValue() == null ? List.of() : goodEntry.getValue());
+            Set<NER.TYPE> pred = new HashSet<>(predicted.getOrDefault(id, List.of()));
+
+            // true positives
+            Set<NER.TYPE> inter = new HashSet<>(pred);
+            inter.retainAll(good);
+            tp += inter.size();
+
+            // false positives
+            Set<NER.TYPE> onlyPred = new HashSet<>(pred);
+            onlyPred.removeAll(good);
+            fp += onlyPred.size();
+
+            // false negatives
+            Set<NER.TYPE> onlyGold = new HashSet<>(good);
+            onlyGold.removeAll(pred);
+            fn += onlyGold.size();
+        }
+
+        return new Metrics(tp, fp, fn);
+    }
+
+    public record Metrics(int tp, int fp, int fn) {
+
+        public double precision() {
+            int denom = tp + fp;
+            return denom == 0 ? 0.0 : (double) tp / denom;
+        }
+
+        public double recall() {
+            int denom = tp + fn;
+            return denom == 0 ? 0.0 : (double) tp / denom;
+        }
+
+        public double f1() {
+            double p = precision();
+            double r = recall();
+            double denom = p + r;
+            return denom == 0.0 ? 0.0 : 2 * p * r / denom;
+        }
+
+        @Override
+        @NonNull
+        public String toString() {
+            return "Metrics{tp=" + tp + ", fp=" + fp + ", fn=" + fn +
+                    ", precision=" + precision() + ", recall=" + recall() + ", f1=" + f1() + "}";
+        }
     }
 }
