@@ -1,0 +1,4 @@
+spacy>=3.7.0
+py4j
+importlib
+pytest

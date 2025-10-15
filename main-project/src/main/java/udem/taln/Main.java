@@ -89,36 +89,19 @@ public class Main {
             List<NER.PSentence> executed = new ArrayList<>();
             switch (args_map.get("model")) {
                 case "en_core_web_lg": {
-//                    System.out.println(processedText);
-                    executed = NER.execute(NER.MODE.LG, processedText);
-                    if (executed != null) {
-                        System.out.println(executed);
-                        System.out.println("Success (%) : " + analyser.analyse(executed) * 100);
-                    }
+                    executed = process(NER.MODE.LG, processedText, analyser);
                     break;
                 }
                 case "en_core_web_md": {
-                    executed = NER.execute(NER.MODE.MD, processedText);
-                    if (executed != null) {
-                        System.out.println(executed);
-                        System.out.println("Success (%) : " + analyser.analyse(executed) * 100);
-                    }
+                    executed = process(NER.MODE.MD, processedText, analyser);
                     break;
                 }
                 case "en_core_web_sm": {
-                    executed = NER.execute(NER.MODE.SM, processedText);
-                    if (executed != null) {
-                        System.out.println(executed);
-                        System.out.println("Success (%) : " + analyser.analyse(executed) * 100);
-                    }
+                    executed = process(NER.MODE.SM, processedText, analyser);
                     break;
                 }
                 case "en_core_web_trf": {
-                    executed = NER.execute(NER.MODE.TRF, processedText);
-                    if (executed != null) {
-                        System.out.println(executed);
-                        System.out.println("Success (%) : " + analyser.analyse(executed) * 100);
-                    }
+                    executed = process(NER.MODE.TRF, processedText, analyser);
                     break;
                 }
             }
@@ -134,9 +117,12 @@ public class Main {
             var processedText = analyser.format(text, true);
 
             var ollama = new OllamaService();
+            long before = System.nanoTime();
             var executed = ollama.execute(processedText);
+            long after = System.nanoTime();
             System.out.println(executed);
-            System.out.println(analyser.analyse(executed));
+            System.out.println("Success (%) : " + analyser.analyse(executed));
+            System.out.println("Time (ms) : " + (after - before) / 1000000.0);
         }
     }
 
@@ -168,5 +154,17 @@ public class Main {
             s.append(c);
         }
         return s.toString();
+    }
+
+    private static List<NER.PSentence> process(NER.MODE mode,  Map<Integer, Analyser.Pair> text, Analyser analyser) {
+        long before = System.nanoTime();
+        var executed = NER.execute(mode, text);
+        long after = System.nanoTime();
+        if (executed != null) {
+            System.out.println(executed);
+            System.out.println("Success (%) : " + analyser.analyse(executed) * 100);
+            System.out.println("Time (ms) : " + (after - before) / 1000000.0);
+        }
+        return executed;
     }
 }
