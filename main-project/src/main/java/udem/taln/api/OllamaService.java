@@ -1,6 +1,7 @@
 package udem.taln.api;
 
 import io.github.ollama4j.Ollama;
+import io.github.ollama4j.exceptions.OllamaException;
 import io.github.ollama4j.models.generate.OllamaGenerateRequest;
 import io.github.ollama4j.models.response.OllamaResult;
 import udem.taln.ner.Analyser;
@@ -9,13 +10,30 @@ import udem.taln.ner.NER;
 import java.util.List;
 
 public class OllamaService implements LLMService {
-    private final String model = "mistral:7b";
+
+    private final String model;
+    private final Ollama ollama;
+
+    public OllamaService(String model) {
+        this.model = model;
+        try {
+            ollama = OllamaUtilities.setUp();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("Ollama API initialized");
+        System.out.println(ollama);
+        try {
+            ollama.pullModel(model);
+        } catch (OllamaException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("Model pulled : " + model);
+    }
 
     @Override
     public List<NER.TYPE> process(Analyser.Pair sentence) {
         try {
-            Ollama ollama = OllamaUtilities.setUp();
-            ollama.pullModel(model);
             String fullPrompt = getFullPrompt(sentence);
 
             OllamaResult result =

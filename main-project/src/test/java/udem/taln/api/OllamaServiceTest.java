@@ -8,7 +8,7 @@ class OllamaServiceTest {
 
     @Test
     void getModel_returnsExpected() {
-        OllamaService service = new OllamaService();
+        OllamaService service = new OllamaService("mistral:7b");
         assertEquals("mistral:7b", service.getModel());
     }
 }

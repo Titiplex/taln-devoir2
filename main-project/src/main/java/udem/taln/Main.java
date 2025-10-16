@@ -112,17 +112,24 @@ public class Main {
                 }
             }
             writeOutput("en-" + args_map.get("file").split("\\.")[1] + "-spacy-" + args_map.get("model").split("_")[3] + ".out", toFile);
-        } else if (args_map.get("llm").equals("ollama")) {
+        } else if (args_map.get("method").equals("ollama")) {
             Analyser analyser = new Analyser();
             var processedText = analyser.format(text, true);
 
-            var ollama = new OllamaService();
+            var ollama = new OllamaService(args_map.get("model"));
             long before = System.nanoTime();
             var executed = ollama.execute(processedText);
             long after = System.nanoTime();
             System.out.println(executed);
             System.out.println("Success (%) : " + analyser.analyse(executed));
             System.out.println("Time (ms) : " + (after - before) / 1000000.0);
+            Map<String, String> toFile = new HashMap<>();
+            if (executed != null) {
+                for (var result : executed) {
+                    toFile.put(processedText.get(result.id()).sentence, result.types().stream().map(Enum::toString).collect(Collectors.joining(",")));
+                }
+            }
+            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "ollama.out", toFile);
         }
     }
 
@@ -141,6 +148,8 @@ public class Main {
                 for (Map.Entry<String, String> entry : output.entrySet()) {
                     bw.write(entry.getValue() + ": " + entry.getKey() + "\n");
                 }
+                bw.flush();
+                System.out.println("Output written successfully.");
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -161,8 +170,8 @@ public class Main {
         var executed = NER.execute(mode, text);
         long after = System.nanoTime();
         if (executed != null) {
-            System.out.println(executed);
-            System.out.println("Success (%) : " + analyser.analyse(executed) * 100);
+//            System.out.println(executed);
+            System.out.println("Success (%) : " + (analyser.analyse(executed) * 100));
             System.out.println("Time (ms) : " + (after - before) / 1000000.0);
         }
         return executed;

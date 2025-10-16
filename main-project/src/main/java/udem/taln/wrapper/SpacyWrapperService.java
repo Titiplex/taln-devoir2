@@ -84,7 +84,6 @@ public class SpacyWrapperService implements AutoCloseable {
     }
 
     public NerDTO getLG(String sentence, String target) {
-        System.out.println("Getting LG for: " + sentence + " and target: " + target);
         return withRetry(() -> {
             var json = requiredPy().processLG(sentence, target);
             return WrapperParsers.parseNER(json);

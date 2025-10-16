@@ -52,9 +52,9 @@ public class NER {
     private static List<PSentence> executeLG(Map<Integer, Analyser.Pair> text) {
         List<PSentence> result = new ArrayList<>();
         for (Map.Entry<Integer, Analyser.Pair> sentence : text.entrySet()) {
-            System.out.println("[NER] LG -> calling Python for id=" + sentence.getKey());
+//            System.out.println("[NER] LG -> calling Python for id=" + sentence.getKey());
             var labels = wrapper.getLG(sentence.getValue().sentence, sentence.getValue().target).labels;
-            System.out.println("[NER] LG <- received for id=" + sentence.getKey() + " labels=" + labels);
+//            System.out.println("[NER] LG <- received for id=" + sentence.getKey() + " labels=" + labels);
             var psentence = new PSentence(sentence.getKey(), mapTypes(labels));
             result.add(psentence);
         }
@@ -64,9 +64,9 @@ public class NER {
     private static List<PSentence> executeMD(Map<Integer, Analyser.Pair> text) {
         List<PSentence> result = new ArrayList<>();
         for (Map.Entry<Integer, Analyser.Pair> sentence : text.entrySet()) {
-            System.out.println("[NER] MD -> calling Python for id=" + sentence.getKey());
+//            System.out.println("[NER] MD -> calling Python for id=" + sentence.getKey());
             var labels = wrapper.getMD(sentence.getValue().sentence, sentence.getValue().target).labels;
-            System.out.println("[NER] MD <- received for id=" + sentence.getKey() + " labels=" + labels);
+//            System.out.println("[NER] MD <- received for id=" + sentence.getKey() + " labels=" + labels);
             var psentence = new PSentence(sentence.getKey(), mapTypes(labels));
             result.add(psentence);
         }
@@ -76,9 +76,9 @@ public class NER {
     private static List<PSentence> executeSM(Map<Integer, Analyser.Pair> text) {
         List<PSentence> result = new ArrayList<>();
         for (Map.Entry<Integer, Analyser.Pair> sentence : text.entrySet()) {
-            System.out.println("[NER] SM -> calling Python for id=" + sentence.getKey());
+//            System.out.println("[NER] SM -> calling Python for id=" + sentence.getKey());
             var labels = wrapper.getSM(sentence.getValue().sentence, sentence.getValue().target).labels;
-            System.out.println("[NER] SM <- received for id=" + sentence.getKey() + " labels=" + labels);
+//            System.out.println("[NER] SM <- received for id=" + sentence.getKey() + " labels=" + labels);
             var psentence = new PSentence(sentence.getKey(), mapTypes(labels));
             result.add(psentence);
         }
@@ -97,6 +97,7 @@ public class NER {
     /**
      * Maps Spacy labels to NER types.
      * You can find labels descriptions <a href="https://medium.com/data-science/named-entity-recognition-with-nltk-and-spacy-8c4a7d88e7da">here</a>
+     *
      * @param labels the spacy extracted labels
      * @return the same list with mapped types to {@link TYPE TYPE}
      */
@@ -111,9 +112,18 @@ public class NER {
     public static TYPE mapType(String s) {
         return switch (s) {
             case "PERSON" -> TYPE.PERSON;
-            case "GPE", "ORG","NORP" -> TYPE.ORGANIZATION;
+            case "GPE", "ORG", "NORP" -> TYPE.ORGANIZATION;
             case "FAC", "LOC" -> TYPE.LOCATION;
             default -> TYPE.NONE;
         };
+    }
+
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                wrapper.close();
+            } catch (Exception ignored) {
+            }
+        }));
     }
 }

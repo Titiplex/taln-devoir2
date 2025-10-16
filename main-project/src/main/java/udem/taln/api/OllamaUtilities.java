@@ -46,7 +46,7 @@ public class OllamaUtilities {
             }
 
             if (useExternalOllamaHost) {
-                System.out.println("Using external Ollama host...");
+//                System.out.println("Using external Ollama host...");
                 api = new Ollama(ollamaHost);
             } else {
                 throw new RuntimeException(
@@ -56,6 +56,8 @@ public class OllamaUtilities {
                                 + " set the env var OLLAMA_HOST=http://localhost:11435 or a different"
                                 + " host/port.");
             }
+            System.out.println("Using external Ollama host: " + useExternalOllamaHostEnv);
+            System.out.println("Using external Ollama host: " + ollamaHostEnv);
         } catch (Exception e) {
             throw new Exception("Could not setup Ollama API: " + e.getMessage());
         }
