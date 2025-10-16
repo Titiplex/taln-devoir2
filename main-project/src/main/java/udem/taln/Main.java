@@ -11,14 +11,125 @@ import java.util.stream.Collectors;
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
+    // contains the args and their values
     private static final HashMap<String, String> args_map = new HashMap<>();
 
     public static void main(String[] args) {
         for (String arg : args) {
             var cleanArg = cleanArg(arg);
-            args_map.put(cleanArg.split("=")[0], cleanArg.split("=")[1]);
+            args_map.put(cleanArg.split("=")[0], cleanArg.split("=")[1] == null ? "true" : cleanArg.split("=")[1]);
         }
 
+        List<String> text = getText();
+
+        // Managing Spacy method
+        if (args_map.get("method").equals("spacy")) {
+            Analyser analyser = new Analyser();
+            var processedText = analyser.format(text, false);
+            List<NER.PSentence> executed = getExecutedSpacy(processedText, analyser);
+            Map<String, String> toFile = new HashMap<>();
+            if (executed != null) {
+                for (var result : executed) {
+                    toFile.put(processedText.get(result.id()).sentence, result.types().stream().map(Enum::toString).collect(Collectors.joining(",")));
+                }
+            }
+            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "-spacy-" + args_map.get("model").split("_")[3] + ".out", toFile);
+        }
+
+        // Managing Ollama method
+        else if (args_map.get("method").equals("ollama")) {
+            Analyser analyser = new Analyser();
+            var processedText = analyser.format(text, true);
+
+            var ollama = new OllamaService(args_map.get("model"));
+            long before = System.nanoTime();
+            var executed = ollama.execute(processedText);
+            long after = System.nanoTime();
+//            System.out.println(executed);
+            System.out.println("Success (%) : " + analyser.analyse(executed));
+            System.out.println("Time (ms) : " + (after - before) / 1000000.0);
+
+            analyse(executed, analyser);
+
+            Map<String, String> toFile = new HashMap<>();
+            if (executed != null) {
+                for (var result : executed) {
+                    toFile.put(processedText.get(result.id()).sentence, result.types().stream().map(Enum::toString).collect(Collectors.joining(",")));
+                }
+            }
+            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "ollama.out", toFile);
+        }
+
+        // Comparing between NRB and WTS on 1 method
+        else if (args_map.get("compare") != null && args_map.get("stats").equals("true")) {
+            Analyser analyserNRB = new Analyser();
+            var processedText = analyserNRB.format(text, false);
+            List<NER.PSentence> executedNRB = getExecutedSpacy(processedText, analyserNRB);
+            List<NER.PSentence> executedWTS = getExecutedSpacy(processedText, new Analyser());
+
+            System.out.println(analyserNRB.mcnemar(executedNRB, executedWTS));
+        }
+    }
+
+    /**
+     * Utility to write the output of execution to a file.
+     *
+     * @param fileName name of the file to write to
+     * @param output   what we want to write to the file
+     */
+    private static void writeOutput(String fileName, Map<String, String> output) {
+        try {
+            System.out.println("Writing output to file " + fileName);
+            File file = new File(fileName);
+            if (!file.exists()) {
+                if (!file.createNewFile()) {
+                    System.err.println("Could not create output file.");
+                    return;
+                }
+                System.out.println("Output file created.");
+            }
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
+                for (Map.Entry<String, String> entry : output.entrySet()) {
+                    bw.write(entry.getValue() + ": " + entry.getKey() + "\n");
+                }
+                bw.flush();
+                System.out.println("Output written successfully.");
+            }
+            System.out.println("Successfully wrote output to file.");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Utility to clean the arguments (especially double dash).
+     */
+    private static String cleanArg(String arg) {
+        StringBuilder s = new StringBuilder();
+        for (var c : arg.toCharArray()) {
+            if (c == '\"' || c == '-') continue;
+            s.append(c);
+        }
+        return s.toString();
+    }
+
+    private static List<NER.PSentence> process(NER.MODE mode, Map<Integer, Analyser.Pair> text, Analyser analyser) {
+        long before = System.nanoTime();
+        var executed = NER.execute(mode, text);
+        long after = System.nanoTime();
+        if (executed != null) {
+//            System.out.println(executed);
+            System.out.println("Time (ms) : " + (after - before) / 1000000.0);
+
+            analyse(executed, analyser);
+        }
+        return executed;
+    }
+
+    /**
+     * Gets the input test according to how it was provided to the main func.
+     */
+    private static List<String> getText() {
         List<String> text = new ArrayList<>();
 
         if (args_map.get("text") != null && !args_map.get("text").isEmpty()) {
@@ -78,116 +189,52 @@ public class Main {
             text = Arrays.stream(inputPipe.toString().split("\n")).toList();
 
             if (text.isEmpty()) {
-                System.err.println("No text provided, please try again.");
-                return;
+                throw new RuntimeException("No text provided");
             }
         }
-
-        if (args_map.get("method").equals("spacy")) {
-            Analyser analyser = new Analyser();
-            var processedText = analyser.format(text, false);
-            List<NER.PSentence> executed = new ArrayList<>();
-            switch (args_map.get("model")) {
-                case "en_core_web_lg": {
-                    executed = process(NER.MODE.LG, processedText, analyser);
-                    break;
-                }
-                case "en_core_web_md": {
-                    executed = process(NER.MODE.MD, processedText, analyser);
-                    break;
-                }
-                case "en_core_web_sm": {
-                    executed = process(NER.MODE.SM, processedText, analyser);
-                    break;
-                }
-                case "en_core_web_trf": {
-                    executed = process(NER.MODE.TRF, processedText, analyser);
-                    break;
-                }
-            }
-            Map<String, String> toFile = new HashMap<>();
-            if (executed != null) {
-                for (var result : executed) {
-                    toFile.put(processedText.get(result.id()).sentence, result.types().stream().map(Enum::toString).collect(Collectors.joining(",")));
-                }
-            }
-            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "-spacy-" + args_map.get("model").split("_")[3] + ".out", toFile);
-        } else if (args_map.get("method").equals("ollama")) {
-            Analyser analyser = new Analyser();
-            var processedText = analyser.format(text, true);
-
-            var ollama = new OllamaService(args_map.get("model"));
-            long before = System.nanoTime();
-            var executed = ollama.execute(processedText);
-            long after = System.nanoTime();
-//            System.out.println(executed);
-            System.out.println("Success (%) : " + analyser.analyse(executed));
-            System.out.println("Time (ms) : " + (after - before) / 1000000.0);
-
-            Analyser.Metrics m = analyser.analyseF1(executed);
-            double precision = m.precision();
-            double recall = m.recall();
-            double f1 = m.f1();
-            System.out.println("Precision: " + precision + ", Recall: " + recall + ", F1: " + f1);
-
-            Map<String, String> toFile = new HashMap<>();
-            if (executed != null) {
-                for (var result : executed) {
-                    toFile.put(processedText.get(result.id()).sentence, result.types().stream().map(Enum::toString).collect(Collectors.joining(",")));
-                }
-            }
-            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "ollama.out", toFile);
-        }
+        return text;
     }
 
-    private static void writeOutput(String fileName, Map<String, String> output) {
-        try {
-            System.out.println("Writing output to file " + fileName);
-            File file = new File(fileName);
-            if (!file.exists()) {
-                if (!file.createNewFile()) {
-                    System.err.println("Could not create output file.");
-                    return;
-                }
-                System.out.println("Output file created.");
+    /**
+     * Executes Spacy on the given text, for all spacy models (provided in args).
+     *
+     * @param text     text to process
+     * @param analyser analyser to use for analyzing the results
+     * @return processed text with NER annotations
+     */
+    public static List<NER.PSentence> getExecutedSpacy(Map<Integer, Analyser.Pair> text, Analyser analyser) {
+        List<NER.PSentence> executed = null;
+        switch (args_map.get("model")) {
+            case "en_core_web_lg": {
+                executed = process(NER.MODE.LG, text, analyser);
+                break;
             }
-            try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
-                for (Map.Entry<String, String> entry : output.entrySet()) {
-                    bw.write(entry.getValue() + ": " + entry.getKey() + "\n");
-                }
-                bw.flush();
-                System.out.println("Output written successfully.");
+            case "en_core_web_md": {
+                executed = process(NER.MODE.MD, text, analyser);
+                break;
             }
-            System.out.println("Successfully wrote output to file.");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static String cleanArg(String arg) {
-        StringBuilder s = new StringBuilder();
-        for (var c : arg.toCharArray()) {
-            if (c == '\"' || c == '-') continue;
-            s.append(c);
-        }
-        return s.toString();
-    }
-
-    private static List<NER.PSentence> process(NER.MODE mode,  Map<Integer, Analyser.Pair> text, Analyser analyser) {
-        long before = System.nanoTime();
-        var executed = NER.execute(mode, text);
-        long after = System.nanoTime();
-        if (executed != null) {
-//            System.out.println(executed);
-            System.out.println("Success (%) : " + (analyser.analyse(executed) * 100));
-            System.out.println("Time (ms) : " + (after - before) / 1000000.0);
-
-            Analyser.Metrics m = analyser.analyseF1(executed);
-            double precision = m.precision();
-            double recall = m.recall();
-            double f1 = m.f1();
-            System.out.println("Precision: " + precision + ", Recall: " + recall + ", F1: " + f1);
+            case "en_core_web_sm": {
+                executed = process(NER.MODE.SM, text, analyser);
+                break;
+            }
+            case "en_core_web_trf": {
+                executed = process(NER.MODE.TRF, text, analyser);
+                break;
+            }
         }
         return executed;
+    }
+
+    /**
+     * Small utility to print some of the stats of the execution.
+     */
+    private static void analyse(List<NER.PSentence> executed, Analyser analyser) {
+        System.out.println("Success (%) : " + (analyser.analyse(executed) * 100));
+        Analyser.Metrics m = analyser.analyseF1(executed);
+        double precision = m.precision();
+        double recall = m.recall();
+        double f1 = m.f1();
+        System.out.println("Precision: " + precision + ", Recall: " + recall + ", F1: " + f1);
+        System.out.println(analyser.analyseAdvanced(executed));
     }
 }
