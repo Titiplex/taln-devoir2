@@ -19,4 +19,20 @@ public interface LLMService {
 
         return result;
     }
+
+    default String getFullPrompt(Analyser.Pair sentence) {
+        String prompt = """
+                You are an expert in named-entity tagging.
+                You will be presented sentences where a target word is presented in double square brackets,
+                and your task is to predict its type, which could be either:
+                 - LOC if the target word designates a location,
+                 - PERSON if the target word designates a person,
+                 - ORG if the target word designates an organization.
+                
+                 Your answer should start by: ANSWER followed by your the target type in between [[ and ]], as in: ANSWER [[PERSON]]
+                 Be brief, do not think! I do not want or need any explanation, just the solution.
+                """;
+        String sentenceString = sentence.sentence;
+        return prompt + "\nSentence:\n" + sentenceString + "\n";
+    }
 }

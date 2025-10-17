@@ -2,6 +2,7 @@ package udem.taln.api;
 
 import io.github.ollama4j.Ollama;
 import org.junit.jupiter.api.Test;
+import udem.taln.api.utils.OllamaUtilities;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;

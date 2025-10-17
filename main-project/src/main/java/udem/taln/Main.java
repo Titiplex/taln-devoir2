@@ -1,5 +1,6 @@
 package udem.taln;
 
+import udem.taln.api.MistralService;
 import udem.taln.api.OllamaService;
 import udem.taln.ner.Analyser;
 import udem.taln.ner.NER;
@@ -27,12 +28,7 @@ public class Main {
             Analyser analyser = new Analyser();
             var processedText = analyser.format(text, false);
             List<NER.PSentence> executed = getExecutedSpacy(processedText, analyser);
-            Map<String, String> toFile = new HashMap<>();
-            if (executed != null) {
-                for (var result : executed) {
-                    toFile.put(processedText.get(result.id()).sentence, result.types().stream().map(Enum::toString).collect(Collectors.joining(",")));
-                }
-            }
+            var toFile = formatForFile(processedText, executed);
             writeOutput("en-" + args_map.get("file").split("\\.")[1] + "-spacy-" + args_map.get("model").split("_")[3] + ".out", toFile);
         }
 
@@ -46,22 +42,34 @@ public class Main {
             var executed = ollama.execute(processedText);
             long after = System.nanoTime();
 //            System.out.println(executed);
-            System.out.println("Success (%) : " + analyser.analyse(executed));
             System.out.println("Time (ms) : " + (after - before) / 1000000.0);
 
             analyse(executed, analyser);
 
-            Map<String, String> toFile = new HashMap<>();
-            if (executed != null) {
-                for (var result : executed) {
-                    toFile.put(processedText.get(result.id()).sentence, result.types().stream().map(Enum::toString).collect(Collectors.joining(",")));
-                }
-            }
-            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "ollama.out", toFile);
+            Map<String, String> toFile = formatForFile(processedText, executed);
+            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "ollama" + args_map.get("model") + ".out", toFile);
+        }
+
+        // Managing Mistral AI method
+        // https://docs.mistral.ai/getting-started/models/models_overview
+        else if (args_map.get("method").equals("mistral")) {
+            Analyser analyser = new Analyser();
+            var processedText = analyser.format(text, true);
+
+            var mistral = new MistralService(args_map.get("model"));
+            long before = System.nanoTime();
+            var executed = mistral.execute(processedText);
+            long after = System.nanoTime();
+            System.out.println("Time (ms) : " + (after - before) / 1000000.0);
+
+            analyse(executed, analyser);
+
+            Map<String, String> toFile = formatForFile(processedText, executed);
+            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "mistral-" + args_map.get("model") + ".out", toFile);
         }
 
         // Comparing between NRB and WTS on 1 method
-        else if (args_map.get("compare") != null && args_map.get("stats").equals("true")) {
+        else if (args_map.get("compare") != null && args_map.get("stats").equals("true") && args_map.get("method").equals("spacy")) {
             Analyser analyserNRB = new Analyser();
             var processedText = analyserNRB.format(text, false);
             List<NER.PSentence> executedNRB = getExecutedSpacy(processedText, analyserNRB);
@@ -69,6 +77,16 @@ public class Main {
 
             System.out.println(analyserNRB.mcnemar(executedNRB, executedWTS));
         }
+    }
+
+    private static Map<String, String> formatForFile(Map<Integer, Analyser.Pair> processedText, List<NER.PSentence> executed) {
+        Map<String, String> toFile = new HashMap<>();
+        if (executed != null) {
+            for (var result : executed) {
+                toFile.put(processedText.get(result.id()).sentence, result.types().stream().map(Enum::toString).collect(Collectors.joining(",")));
+            }
+        }
+        return toFile;
     }
 
     /**

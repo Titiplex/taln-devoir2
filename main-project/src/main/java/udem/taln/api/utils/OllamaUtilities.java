@@ -1,10 +1,10 @@
-package udem.taln.api;
+package udem.taln.api.utils;
 
 import io.github.ollama4j.Ollama;
 import java.util.Properties;
 
 /**
- * Not <a href="https://github.com/ollama4j/ollama4j-examples/blob/main/src/main/java/io/github/ollama4j/utils/Utilities.java">Original content</a>
+ * Note <a href="https://github.com/ollama4j/ollama4j-examples/blob/main/src/main/java/io/github/ollama4j/utils/Utilities.java">Original content</a>
  */
 public class OllamaUtilities {
     public static Ollama setUp() throws Exception {
