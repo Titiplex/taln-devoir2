@@ -19,36 +19,24 @@ public class Main {
         for (String arg : args) {
             var cleanArg = cleanArg(arg);
             System.out.println("Arg: " + cleanArg);
-            args_map.put(cleanArg.split("=")[0], cleanArg.split("=")[1] == null ? "true" : cleanArg.split("=")[1]);
+            args_map.put(cleanArg.split("=")[0], cleanArg.split("=").length == 1 ? "true" : cleanArg.split("=")[1]);
         }
 
         List<String> text = getText();
 
         // Managing Spacy method
-        if (args_map.get("method").equals("spacy")) {
+        if ((args_map.get("compare") == null || !args_map.get("compare").equals("true")) && args_map.get("method").equals("spacy")) {
+            System.out.println("Executing Spacy...");
             Analyser analyser = new Analyser();
             var processedText = analyser.format(text, false);
-            List<NER.PSentence> executed = getExecutedSpacy(processedText, analyser);
+            List<NER.PSentence> executed = getExecutedSpacy(processedText, analyser, true);
             var toFile = formatForFile(processedText, executed);
             writeOutput("en-" + args_map.get("file").split("\\.")[1] + "-spacy-" + args_map.get("model").split("_")[3] + ".out", toFile);
         }
 
         // Managing Ollama method
         else if (args_map.get("method").equals("ollama")) {
-            Analyser analyser = new Analyser();
-            var processedText = analyser.format(text, true);
-
-            var ollama = new OllamaService(args_map.get("model"));
-            long before = System.nanoTime();
-            var executed = ollama.execute(processedText);
-            long after = System.nanoTime();
-//            System.out.println(executed);
-            System.out.println("Time (ms) : " + (after - before) / 1000000.0);
-
-            analyse(executed, analyser);
-
-            Map<String, String> toFile = formatForFile(processedText, executed);
-            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "ollama" + args_map.get("model") + ".out", toFile);
+            runOllama(text, true, true);
         }
 
         // Managing Mistral AI method
@@ -71,15 +59,41 @@ public class Main {
             writeOutput("en-" + args_map.get("file").split("\\.")[1] + "mistral-" + args_map.get("model") + ".out", toFile);
         }
 
-        // Comparing between NRB and WTS on 1 method
-        else if (args_map.get("compare") != null && args_map.get("stats").equals("true") && args_map.get("method").equals("spacy")) {
-            Analyser analyserNRB = new Analyser();
-            var processedText = analyserNRB.format(text, false);
-            List<NER.PSentence> executedNRB = getExecutedSpacy(processedText, analyserNRB);
-            List<NER.PSentence> executedWTS = getExecutedSpacy(processedText, new Analyser());
+        // Comparing between one model and LG Spacy on 1 method
+        else if (args_map.get("compare") != null) {
+            System.out.println("Executing Comparing between NRB and WTS on Spacy...");
+            Analyser analyser = new Analyser();
+            var fText = new Analyser().format(text, false);
+            List<NER.PSentence> executedOther = List.of();
 
-            System.out.println(analyserNRB.mcnemar(executedNRB, executedWTS));
+            if (args_map.get("method").equals("spacy")) executedOther = getExecutedSpacy(fText, analyser, false);
+            else if (args_map.get("method").equals("ollama")) executedOther = runOllama(text, false, false);
+
+            args_map.replace("model", "en_core_web_lg");
+            List<NER.PSentence> executedLG = getExecutedSpacy(fText, analyser, false);
+
+            System.out.println(analyser.mcnemar(executedLG, executedOther).toString());
         }
+    }
+
+    private static List<NER.PSentence> runOllama(List<String> text, boolean analyse, boolean printToFile) {
+        Analyser analyser = new Analyser();
+        var processedText = analyser.format(text, true);
+
+        var ollama = new OllamaService(args_map.get("model"));
+        long before = System.nanoTime();
+        var executed = ollama.execute(processedText);
+        long after = System.nanoTime();
+//            System.out.println(executed);
+        System.out.println("Time (ms) : " + (after - before) / 1000000.0);
+
+        if (analyse) analyse(executed, analyser);
+
+        if (printToFile){
+            Map<String, String> toFile = formatForFile(processedText, executed);
+            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "ollama" + args_map.get("model") + ".out", toFile);
+        }
+        return executed;
     }
 
     private static Map<String, String> formatForFile(Map<Integer, Analyser.Pair> processedText, List<NER.PSentence> executed) {
@@ -129,7 +143,7 @@ public class Main {
         return arg.substring(arg.indexOf("--") + 2);
     }
 
-    private static List<NER.PSentence> process(NER.MODE mode, Map<Integer, Analyser.Pair> text, Analyser analyser) {
+    private static List<NER.PSentence> process(NER.MODE mode, Map<Integer, Analyser.Pair> text, Analyser analyser, boolean analyse) {
         long before = System.nanoTime();
         var executed = NER.execute(mode, text);
         long after = System.nanoTime();
@@ -137,7 +151,7 @@ public class Main {
 //            System.out.println(executed);
             System.out.println("Time (ms) : " + (after - before) / 1000000.0);
 
-            analyse(executed, analyser);
+            if (analyse) analyse(executed, analyser);
         }
         return executed;
     }
@@ -218,23 +232,23 @@ public class Main {
      * @param analyser analyser to use for analyzing the results
      * @return processed text with NER annotations
      */
-    public static List<NER.PSentence> getExecutedSpacy(Map<Integer, Analyser.Pair> text, Analyser analyser) {
+    public static List<NER.PSentence> getExecutedSpacy(Map<Integer, Analyser.Pair> text, Analyser analyser, boolean analyse) {
         List<NER.PSentence> executed = null;
         switch (args_map.get("model")) {
             case "en_core_web_lg": {
-                executed = process(NER.MODE.LG, text, analyser);
+                executed = process(NER.MODE.LG, text, analyser, analyse);
                 break;
             }
             case "en_core_web_md": {
-                executed = process(NER.MODE.MD, text, analyser);
+                executed = process(NER.MODE.MD, text, analyser, analyse);
                 break;
             }
             case "en_core_web_sm": {
-                executed = process(NER.MODE.SM, text, analyser);
+                executed = process(NER.MODE.SM, text, analyser, analyse);
                 break;
             }
             case "en_core_web_trf": {
-                executed = process(NER.MODE.TRF, text, analyser);
+                executed = process(NER.MODE.TRF, text, analyser, analyse);
                 break;
             }
         }
