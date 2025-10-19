@@ -4,6 +4,9 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.*;
 
+/**
+ * Class assisted by copilot to fix bugs and improve code readability.
+ */
 public class Analyser {
     private final HashMap<Integer, List<NER.TYPE>> labelsMap;
 
