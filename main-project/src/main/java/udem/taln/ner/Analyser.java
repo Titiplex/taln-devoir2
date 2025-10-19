@@ -245,8 +245,10 @@ public class Analyser {
      * <a href="https://en.wikipedia.org/wiki/McNemar%27s_test#Example_implementation_in_Python">Inspired by Wikipedia</a>
      */
     public McNemar mcnemar(List<NER.PSentence> predA, List<NER.PSentence> predB) {
-        if (predA == null || predB == null || predA.size() != predB.size() || predA.size() != labelsMap.size())
+        if (predA == null || predB == null || predA.size() != predB.size() || predA.size() != labelsMap.size()) {
+            System.out.println(predA.size() + " " + predB.size() + " " + labelsMap.size());
             throw new IllegalArgumentException("PredA, PredB, and gold must have same size.");
+        }
 
         if (labelSet.isEmpty()) {
             defaultLabelSet();

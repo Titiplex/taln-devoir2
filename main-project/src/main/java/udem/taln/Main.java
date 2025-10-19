@@ -31,11 +31,11 @@ public class Main {
             var processedText = analyser.format(text, false);
             List<NER.PSentence> executed = getExecutedSpacy(processedText, analyser, true);
             var toFile = formatForFile(processedText, executed);
-            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "-spacy-" + args_map.get("model").split("_")[3] + ".out", toFile);
+            writeOutput("en-" + args_map.get("file").split("\\.")[1] + "-spacy-2methode-" + args_map.get("model").split("_")[3] + ".out", toFile);
         }
 
         // Managing Ollama method
-        else if (args_map.get("method").equals("ollama")) {
+        else if ((args_map.get("compare") == null || !args_map.get("compare").equals("true")) && args_map.get("method").equals("ollama")) {
             runOllama(text, true, true);
         }
 
@@ -63,11 +63,12 @@ public class Main {
         else if (args_map.get("compare") != null) {
             System.out.println("Executing Comparing between NRB and WTS on Spacy...");
             Analyser analyser = new Analyser();
-            var fText = new Analyser().format(text, false);
+            var subText = text.subList(0, 100);
+            var fText = analyser.format(subText, false);
             List<NER.PSentence> executedOther = List.of();
 
             if (args_map.get("method").equals("spacy")) executedOther = getExecutedSpacy(fText, analyser, false);
-            else if (args_map.get("method").equals("ollama")) executedOther = runOllama(text, false, false);
+            else if (args_map.get("method").equals("ollama")) executedOther = runOllama(subText, false, false);
 
             args_map.replace("model", "en_core_web_lg");
             List<NER.PSentence> executedLG = getExecutedSpacy(fText, analyser, false);
@@ -79,6 +80,7 @@ public class Main {
     private static List<NER.PSentence> runOllama(List<String> text, boolean analyse, boolean printToFile) {
         Analyser analyser = new Analyser();
         var processedText = analyser.format(text, true);
+        System.out.println("Ollama size to process : "+processedText.size());
 
         var ollama = new OllamaService(args_map.get("model"));
         long before = System.nanoTime();
