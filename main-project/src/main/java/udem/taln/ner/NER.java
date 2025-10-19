@@ -112,8 +112,8 @@ public class NER {
     public static TYPE mapType(String s) {
         return switch (s) {
             case "PERSON" -> TYPE.PERSON;
-            case "GPE", "ORG", "NORP" -> TYPE.ORGANIZATION;
-            case "FAC", "LOC" -> TYPE.LOCATION;
+            case "ORG", "NORP" -> TYPE.ORGANIZATION;
+            case "GPE", "LOC" -> TYPE.LOCATION;
             default -> TYPE.NONE;
         };
     }

@@ -12,9 +12,11 @@ public interface LLMService {
 
     default List<NER.PSentence> execute(Map<Integer, Analyser.Pair> text) {
         List<NER.PSentence> result = new ArrayList<>();
-
+        int i = 1;
         for (var sentence : text.entrySet()) {
+            System.out.println("Ollama process nb : "+i);
             result.add(new NER.PSentence(sentence.getKey(), this.process(sentence.getValue())));
+            i++;
         }
 
         return result;
