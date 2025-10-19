@@ -7,6 +7,10 @@ This project is organized in 2 modules :
 - [main-project](main-project)
 - [spacy-wrapper](spacy-wrapper)
 
+<p>
+Please be sure to place "en.nrb.txt" and "en.wts.txt" at the root of the project.
+</p>
+
 ## Main-project
 
 This is the java part of the project, which is also the main part.
@@ -24,3 +28,10 @@ class.
 ## Spacy-wrapper
 
 This is the python part of the project, which is really only an interface to the wrapper of the spacy package.
+
+## Commands
+
+To launch the project, you can use the following commands :
+````bash
+mvn clean compile exec:java -Dexec.mainClass="udem.taln.Main" -Dexec.args="--method=\"...\" --model=\"...\" --file=\"...\" [--compare]"
+````
